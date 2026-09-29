@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#5b5cf0">
+<title>StudyNotes</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#5b5cf0;--soft:#eef0ff}
+body.dark{--bg:#090d18;--card:#111827;--text:#f3f4f6;--muted:#9ca3af;--line:#263244;--soft:#1b2040}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+.app{max-width:1050px;margin:auto;padding:18px 15px 90px}.top,.section{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:800;font-size:24px}.brand span{color:var(--accent)}
+button{font:inherit;cursor:pointer;border:0}.icon{width:42px;height:42px;border-radius:14px;background:var(--card);color:var(--text);border:1px solid var(--line)}
+.greet{margin:28px 0 16px}.greet h1{margin:0;font-size:30px}.greet p{color:var(--muted);margin:6px 0}
+.search{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0 14px}
+.search input{width:100%;padding:14px 0;border:0;outline:0;background:transparent;color:var(--text)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0 24px}.stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.stat b{font-size:23px}.stat small{display:block;color:var(--muted);margin-top:5px}
+.section{margin:20px 0 12px}.section h2{font-size:19px;margin:0}.add{background:var(--accent);color:white;border-radius:13px;padding:11px 15px;font-weight:700}
+.subjects{display:flex;gap:9px;overflow:auto}.chip{white-space:nowrap;background:var(--card);color:var(--text);border:1px solid var(--line);padding:10px 14px;border-radius:13px}.chip.active{background:var(--soft);color:var(--accent)}
+.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.note{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;min-height:145px;position:relative}
+.note h3{margin:0 35px 8px 0}.note p{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 16px;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}.pin{position:absolute;right:10px;top:10px;background:none}
+.empty{text-align:center;padding:45px;color:var(--muted);grid-column:1/-1}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;justify-content:center;z-index:5}.modal.show{display:flex}
+.sheet{width:min(700px,100%);background:var(--card);border-radius:24px 24px 0 0;padding:22px;max-height:90vh;overflow:auto}
+.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--bg);color:var(--text)}
+.field textarea{min-height:180px}.actions{display:flex;gap:10px}.actions button{flex:1;padding:13px;border-radius:13px;font-weight:700}.save{background:var(--accent);color:white}.cancel{background:var(--soft);color:var(--text)}
+.fab{position:fixed;right:20px;bottom:20px;width:58px;height:58px;border-radius:20px;background:var(--accent);color:white;font-size:27px}
+@media(max-width:800px){.notes{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.notes{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.greet h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="brand">Study<span>Notes</span></div><button class="icon" id="theme">☾</button></header>
+<section class="greet"><h1>Study smarter. 📚</h1><p>Your notes, organized for exam time.</p></section>
+<div class="search">🔎 <input id="search" placeholder="Search notes, topics or subjects..."></div>
+<div class="grid">
+<div class="stat"><b id="total">0</b><small>Total Notes</small></div>
+<div class="stat"><b id="pinned">0</b><small>Pinned</small></div>
+<div class="stat"><b id="fav">0</b><small>Favorites</small></div>
+<div class="stat"><b id="scount">0</b><small>Subjects</small></div>
+</div>
+<div class="section"><h2>Subjects</h2><button class="add" onclick="openModal()">+ New Note</button></div>
+<div class="subjects" id="subjects"></div>
+<div class="section"><h2 id="heading">Recent Notes</h2></div>
+<div class="notes" id="notes"></div>
+</div>
+<button class="fab" onclick="openModal()">＋</button>
+
+<div class="modal" id="modal"><div class="sheet">
+<h2 id="mtitle">Create Note</h2>
+<div class="field"><label>Title</label><input id="title" maxlength="100" placeholder="e.g. Laws of Motion"></div>
+<div class="field"><label>Subject</label><select id="subject"><option>Physics</option><option>Chemistry</option><option>Mathematics</option><option>Biology</option><option>English</option><option>Other</option></select></div>
+<div class="field"><label>Note</label><textarea id="content" placeholder="Write your study notes here..."></textarea></div>
+<div class="actions"><button class="cancel" onclick="closeModal()">Cancel</button><button class="save" onclick="saveNote()">Save Note</button></div>
+</div></div>
+
+<script>
+const KEY='studynotes_v1';
+let notes=JSON.parse(localStorage.getItem(KEY)||'[]'),filter='All',editing=null;
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function persist(){localStorage.setItem(KEY,JSON.stringify(notes))}
+function render(){
+ const subs=['All','Physics','Chemistry','Mathematics','Biology','English','Other'];
+ $('subjects').innerHTML=subs.map(s=>'<button class="chip '+(filter===s?'active':'')+'" onclick="setFilter(\''+s+'\')">'+s+'</button>').join('');
+ const q=$('search').value.toLowerCase();
+ const a=notes.filter(n=>(filter==='All'||n.subject===filter)&&(!q||(n.title+' '+n.content+' '+n.subject).toLowerCase().includes(q))).sort((a,b)=>b.updated-a.updated);
+ $('total').textContent=notes.length;
+ $('pinned').textContent=notes.filter(n=>n.pinned).length;
+ $('fav').textContent=notes.filter(n=>n.favorite).length;
+ $('scount').textContent=new Set(notes.map(n=>n.subject)).size;
+ $('heading').textContent=filter==='All'?'Recent Notes':filter+' Notes';
+ $('notes').innerHTML=a.length?a.map(n=>'<article class="note" onclick="openModal(\''+n.id+'\')"><button class="pin" onclick="event.stopPropagation();togglePin(\''+n.id+'\')">'+(n.pinned?'📌':'☆')+'</button><h3>'+esc(n.title)+'</h3><p>'+esc(n.content)+'</p><div class="meta"><span>'+esc(n.subject)+'</span><span>'+(n.favorite?'♥ ':'')+new Date(n.updated).toLocaleDateString()+'</span></div></article>').join(''):'<div class="empty">📝<br><br>No notes found.<br>Create your first study note.</div>';
+}
+function setFilter(s){filter=s;render()}
+function openModal(id=null){
+ editing=id;$('mtitle').textContent=id?'Edit Note':'Create Note';
+ if(id){let n=notes.find(x=>x.id===id);$('title').value=n.title;$('subject').value=n.subject;$('content').value=n.content}
+ else{$('title').value='';$('content').value='';$('subject').value='Physics'}
+ $('modal').classList.add('show');$('title').focus()
+}
+function closeModal(){$('modal').classList.remove('show');editing=null}
+function saveNote(){
+ let title=$('title').value.trim(),content=$('content').value.trim();
+ if(!title||!content)return alert('Please add a title and note.');
+ if(editing){let n=notes.find(x=>x.id===editing);n.title=title;n.subject=$('subject').value;n.content=content;n.updated=Date.now()}
+ else notes.push({id:crypto.randomUUID(),title,subject:$('subject').value,content,updated:Date.now(),pinned:false,favorite:false});
+ persist();closeModal();render()
+}
+function togglePin(id){let n=notes.find(x=>x.id===id);n.pinned=!n.pinned;persist();render()}
+$('search').oninput=render;
+$('theme').onclick=()=>{document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark'));$('theme').textContent=document.body.classList.contains('dark')?'☀':'☾'};
+if(localStorage.getItem('dark')==='true'){$('theme').click()}
+render();
+</script>
+</body>
+</html>
